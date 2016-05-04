@@ -15,8 +15,18 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import de.wirecard.paymentsdk.*;
 import de.wirecard.paymentsdk.BuildConfig;
+import de.wirecard.paymentsdk.WirecardCardFormFragment;
+import de.wirecard.paymentsdk.WirecardClient;
+import de.wirecard.paymentsdk.WirecardClientBuilder;
+import de.wirecard.paymentsdk.WirecardEnvironment;
+import de.wirecard.paymentsdk.WirecardException;
+import de.wirecard.paymentsdk.WirecardInputFormsStateChangedListener;
+import de.wirecard.paymentsdk.WirecardInputFormsStateManager;
+import de.wirecard.paymentsdk.WirecardPaymentResponse;
+import de.wirecard.paymentsdk.WirecardResponseError;
+import de.wirecard.paymentsdk.WirecardResponseListener;
+import de.wirecard.paymentsdk.WirecardTransactionType;
 import de.wirecard.paymentsdk.models.CustomerData;
 import de.wirecard.paymentsdk.models.WirecardExtendedCardPayment;
 
@@ -40,15 +50,15 @@ public class MainActivity extends AppCompatActivity {
             wirecardClient = WirecardClientBuilder.newInstance(this, environment)
                     .build();
         } catch (WirecardException exception) {
-            //device is rooted
+            Log.d(BuildConfig.APPLICATION_ID, "device is rooted");
         }
-        
+
         if (savedInstanceState == null) {
             wirecardCardFormFragment = new WirecardCardFormFragment();
+            wirecardCardFormFragment.setLocale("de");
             getSupportFragmentManager()
                     .beginTransaction()
                     .add(R.id.container, wirecardCardFormFragment).commit();
-
         }
 
         WirecardInputFormsStateChangedListener wirecardInputFormsStateChangedListener = new WirecardInputFormsStateChangedListener() {
@@ -87,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
                 transactionType.getValue() + amount + currency + secretKey;
 
         String signature = generateSignature(data);
-
 
         WirecardExtendedCardPayment wirecardExtendedCardPayment =
                 new WirecardExtendedCardPayment(timestamp, requestID, merchantID,
