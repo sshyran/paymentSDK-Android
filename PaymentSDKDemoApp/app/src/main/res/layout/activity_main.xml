@@ -22,11 +22,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_toRightOf="@+id/state_label"
-            android:textSize="10dp"
+            android:textSize="10sp"
             tools:text="status" />
 
     </RelativeLayout>
-
 
     <FrameLayout
         android:id="@+id/container"
@@ -34,5 +33,12 @@
         android:layout_height="wrap_content">
 
     </FrameLayout>
+
+    <Switch
+        android:id="@+id/securityCodeOnlySwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="(CVC/CID) only" />
 
 </LinearLayout>
