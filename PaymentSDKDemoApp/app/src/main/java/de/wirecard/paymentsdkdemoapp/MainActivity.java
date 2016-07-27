@@ -121,8 +121,8 @@ public class MainActivity extends AppCompatActivity {
 
         // for testing purposes only, do not store your merchant account ID and secret key inside app
         String timestamp = generateTimestamp();
-        String merchantID = "";
-        String secretKey = "";
+        String merchantID = "33f6d473-3036-4ca5-acb5-8c64dac862d1";
+        String secretKey = "9e0130f6-2e1e-4185-b0d5-dc69079c75cc";
         String requestID = UUID.randomUUID().toString();
         WirecardTransactionType transactionType = WirecardTransactionType.AUTHORIZATION_ONLY;
         BigDecimal amount = new BigDecimal(0);

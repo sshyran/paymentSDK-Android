@@ -63,33 +63,57 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void makeTransaction(WirecardPaymentType wirecardPaymentType, WirecardTransactionType transactionType) {
 
+        String merchantID;
+        String secretKey;
+        String data;
+        String signature;
+
         // for testing purposes only, do not store your merchant account ID and secret key inside app
         String timestamp = generateTimestamp();
-        String merchantID = "";
-        String secretKey = "";
         String requestID = UUID.randomUUID().toString();
         BigDecimal amount = new BigDecimal(10);
         String currency = "EUR";
 
-        String data = timestamp + requestID + merchantID +
-                transactionType.getValue() + amount + currency + secretKey;
-
-        String signature = generateSignature(data);
 
         WirecardPayment wirecardPayment = null;
 
         switch (wirecardPaymentType) {
             case CREDIT_CARD:
+
+                merchantID = "33f6d473-3036-4ca5-acb5-8c64dac862d1";
+                secretKey = "9e0130f6-2e1e-4185-b0d5-dc69079c75cc";
+
+                data = timestamp + requestID + merchantID +
+                        transactionType.getValue() + amount + currency + secretKey;
+                signature = generateSignature(data);
+
                 wirecardPayment = new WirecardCardPayment(timestamp, requestID, merchantID,
                         transactionType, amount,
                         currency, signature);
+                ((WirecardCardPayment) wirecardPayment).setAttempt3d(true);
                 break;
             case PAYPAL:
+
+                merchantID = "9abf05c1-c266-46ae-8eac-7f87ca97af28";
+                secretKey = "5fca2a83-89ca-4f9e-8cf7-4ca74a02773f";
+
+                data = timestamp + requestID + merchantID +
+                        transactionType.getValue() + amount + currency + secretKey;
+                signature = generateSignature(data);
+
                 wirecardPayment = new WirecardPayPalPayment(timestamp, requestID, merchantID,
                         transactionType, amount,
                         currency, signature);
                 break;
             case SEPA:
+
+                merchantID = "4c901196-eff7-411e-82a3-5ef6b6860d64";
+                secretKey = "ecdf5990-0372-47cd-a55d-037dccfe9d25";
+
+                data = timestamp + requestID + merchantID +
+                        transactionType.getValue() + amount + currency + secretKey;
+                signature = generateSignature(data);
+
                 wirecardPayment = new WirecardSepaPayment(timestamp, requestID, merchantID, transactionType,
                         amount, currency, signature, "creditorID", "mandateID", new Date(),
                         "merchantName", null);
@@ -101,7 +125,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onSuccess(WirecardPaymentResponse wirecardPaymentResponse) {
                 Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, "response received");
 
-                resultLabel.setText(wirecardPaymentResponse.getTransactionState().getValue());
+                resultLabel.setText(wirecardPaymentResponse.getTransactionState().getValue() + "\n"
+                        + wirecardPaymentResponse.getStatuses().getStatus()[0].getDescription());
             }
 
             @Override

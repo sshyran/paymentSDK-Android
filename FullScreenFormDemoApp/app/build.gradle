@@ -28,7 +28,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.4.0'
 
-    compile 'com.github.wirecard:paymentSDK-Android:2.0.8-cardScannerDisabled'
+    compile 'com.github.wirecard:paymentSDK-Android:2.0.9-cardScannerDisabled'
 
   //  compile 'io.card:android-sdk:5.3.4'
     compile 'com.squareup.okhttp3:logging-interceptor:3.0.1'
