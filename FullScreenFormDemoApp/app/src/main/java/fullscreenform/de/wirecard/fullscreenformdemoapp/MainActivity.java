@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         WirecardPayment wirecardPayment = null;
 
         switch (wirecardPaymentType) {
-            case CREDIT_CARD:
+            case CARD:
 
                 merchantID = "33f6d473-3036-4ca5-acb5-8c64dac862d1";
                 secretKey = "9e0130f6-2e1e-4185-b0d5-dc69079c75cc";
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         wirecardClient.makePayment(wirecardPayment, null, new WirecardResponseListener() {
             @Override
-            public void onSuccess(WirecardPaymentResponse wirecardPaymentResponse) {
+            public void onResponse(WirecardPaymentResponse wirecardPaymentResponse) {
                 Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, "response received");
 
                 resultLabel.setText(wirecardPaymentResponse.getTransactionState().getValue() + "\n"
@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.card:
-                makeTransaction(WirecardPaymentType.CREDIT_CARD, WirecardTransactionType.PURCHASE);
+                makeTransaction(WirecardPaymentType.CARD, WirecardTransactionType.PURCHASE);
                 break;
             case R.id.paypal:
                 makeTransaction(WirecardPaymentType.PAYPAL, WirecardTransactionType.DEBIT);
