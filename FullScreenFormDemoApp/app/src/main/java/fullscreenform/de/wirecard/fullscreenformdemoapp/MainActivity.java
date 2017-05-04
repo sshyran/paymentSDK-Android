@@ -2,20 +2,21 @@ package fullscreenform.de.wirecard.fullscreenformdemoapp;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import de.wirecard.paymentsdk.WirecardClient;
 import de.wirecard.paymentsdk.WirecardClientBuilder;
@@ -33,6 +34,9 @@ import de.wirecard.paymentsdk.models.WirecardSepaPayment;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
+    private static final String ENCRYPTION_ALGORITHM = "HS256";
+    private static final String UTF_8 = "UTF-8";
 
     private WirecardClient wirecardClient;
     private TextView resultLabel;
@@ -65,7 +69,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         String merchantID;
         String secretKey;
-        String data;
         String signature;
 
         // for testing purposes only, do not store your merchant account ID and secret key inside app
@@ -73,7 +76,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String requestID = UUID.randomUUID().toString();
         BigDecimal amount = new BigDecimal(10);
         String currency = "EUR";
-
 
         WirecardPayment wirecardPayment = null;
 
@@ -83,13 +85,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 merchantID = "33f6d473-3036-4ca5-acb5-8c64dac862d1";
                 secretKey = "9e0130f6-2e1e-4185-b0d5-dc69079c75cc";
 
-                data = timestamp + requestID + merchantID +
-                        transactionType.getValue() + amount + currency + secretKey;
-                signature = generateSignature(data);
+                signature = generateSignatureV2(timestamp, merchantID, requestID,
+                        transactionType.getValue(), amount, currency, secretKey);
 
-                wirecardPayment = new WirecardCardPayment(timestamp, requestID, merchantID,
-                        transactionType, amount,
-                        currency, signature);
+                wirecardPayment = new WirecardCardPayment(signature, timestamp, requestID,
+                        merchantID, transactionType, amount, currency);
                 ((WirecardCardPayment) wirecardPayment).setAttempt3d(true);
                 break;
             case PAYPAL:
@@ -97,25 +97,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 merchantID = "9abf05c1-c266-46ae-8eac-7f87ca97af28";
                 secretKey = "5fca2a83-89ca-4f9e-8cf7-4ca74a02773f";
 
-                data = timestamp + requestID + merchantID +
-                        transactionType.getValue() + amount + currency + secretKey;
-                signature = generateSignature(data);
+                signature = generateSignatureV2(timestamp, merchantID, requestID,
+                        transactionType.getValue(), amount, currency, secretKey);
 
-                wirecardPayment = new WirecardPayPalPayment(timestamp, requestID, merchantID,
-                        transactionType, amount,
-                        currency, signature);
+                wirecardPayment = new WirecardPayPalPayment(signature, timestamp, requestID,
+                        merchantID, transactionType, amount, currency);
                 break;
             case SEPA:
 
                 merchantID = "4c901196-eff7-411e-82a3-5ef6b6860d64";
                 secretKey = "ecdf5990-0372-47cd-a55d-037dccfe9d25";
 
-                data = timestamp + requestID + merchantID +
-                        transactionType.getValue() + amount + currency + secretKey;
-                signature = generateSignature(data);
+                signature = generateSignatureV2(timestamp, merchantID, requestID,
+                        transactionType.getValue(), amount, currency, secretKey);
 
-                wirecardPayment = new WirecardSepaPayment(timestamp, requestID, merchantID, transactionType,
-                        amount, currency, signature, "creditorID", "mandateID", new Date(),
+                wirecardPayment = new WirecardSepaPayment(signature, timestamp, requestID,
+                        merchantID, transactionType, amount, currency, "creditorID", "mandateID", new Date(),
                         "merchantName", null);
                 break;
         }
@@ -138,35 +135,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private String generateTimestamp() {
-        TimeZone timeZone = TimeZone.getTimeZone("UTC");
-        Calendar calendar = Calendar.getInstance(timeZone);
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH);
-        simpleDateFormat.setTimeZone(timeZone);
-        return simpleDateFormat.format(calendar.getTime());
-    }
-
-    public String generateSignature(String text) {
-        MessageDigest md = null;
-        try {
-            md = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        StringBuilder sb = new StringBuilder();
-        try {
-            md.update(text.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        byte[] mbs = md.digest();
-        sb.setLength(0);
-        for (int i = 0; i < mbs.length; i++) {
-            sb.append(Integer.toString((mbs[i] & 0xff) + 0x100, 16).substring(1));
-        }
-        return sb.toString();
-    }
-
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
@@ -180,5 +148,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 makeTransaction(WirecardPaymentType.SEPA, WirecardTransactionType.PENDING_DEBIT);
                 break;
         }
+    }
+
+    private static String generateSignatureV2(String timestamp, String merchantID, String requestID,
+                                              String transactionType, BigDecimal amount, String currency,
+                                              String secretKey) {
+
+        String payload = ENCRYPTION_ALGORITHM.toUpperCase() + "\n" +
+                "request_time_stamp=" + timestamp + "\n" +
+                "merchant_account_id=" + merchantID + "\n" +
+                "request_id=" + requestID + "\n" +
+                "transaction_type=" + transactionType + "\n" +
+                "requested_amount=" + amount + "\n" +
+                "requested_amount_currency=" + currency.toUpperCase();
+
+        try {
+            byte[] encryptedPayload = encryptSignatureV2(payload, secretKey);
+            return new String(Base64.encode(payload.getBytes(UTF_8), Base64.NO_WRAP), UTF_8)
+                    + "." + new String(Base64.encode(encryptedPayload, Base64.NO_WRAP), UTF_8);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static byte[] encryptSignatureV2(String payload, String secretKey) {
+        try {
+            final Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretKey.getBytes(), "HmacSHA256"));
+            return mac.doFinal(payload.getBytes());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new byte[1];
+    }
+
+    private String generateTimestamp() {
+        TimeZone timeZone = TimeZone.getTimeZone("UTC");
+        Calendar calendar = Calendar.getInstance(timeZone);
+        return new StringBuilder(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH)
+                .format(calendar.getTime()))
+                .insert(22, ":")
+                .toString();
     }
 }

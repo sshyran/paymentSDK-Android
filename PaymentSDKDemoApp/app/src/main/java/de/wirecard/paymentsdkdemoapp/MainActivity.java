@@ -2,20 +2,21 @@ package de.wirecard.paymentsdkdemoapp;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import de.wirecard.paymentsdk.BuildConfig;
 import de.wirecard.paymentsdk.CardBrand;
@@ -35,6 +36,9 @@ import de.wirecard.paymentsdk.models.CustomerData;
 import de.wirecard.paymentsdk.models.WirecardExtendedCardPayment;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String ENCRYPTION_ALGORITHM = "HS256";
+    private static final String UTF_8 = "UTF-8";
 
     private WirecardClient wirecardClient;
     private WirecardInputFormsStateManager wirecardInputFormsStateManager;
@@ -128,15 +132,12 @@ public class MainActivity extends AppCompatActivity {
         BigDecimal amount = new BigDecimal("5.05");
         String currency = "EUR";
 
-        String data = timestamp + requestID + merchantID +
-                transactionType.getValue() + amount + currency + secretKey;
-
-        String signature = generateSignature(data);
+        String signature = generateSignatureV2(timestamp, merchantID, requestID,
+                transactionType.getValue(), amount, currency, secretKey);
 
         wirecardExtendedCardPayment =
-                new WirecardExtendedCardPayment(timestamp, requestID, merchantID,
-                        transactionType, amount,
-                        currency, signature);
+                new WirecardExtendedCardPayment(signature, timestamp, requestID,
+                        merchantID, transactionType, amount, currency);
     }
 
     private void makeTransaction(boolean tokenAppended) {
@@ -175,33 +176,46 @@ public class MainActivity extends AppCompatActivity {
         wirecardInputFormsStateManager.startReceivingEvents();
     }
 
+    private static String generateSignatureV2(String timestamp, String merchantID, String requestID,
+                                              String transactionType, BigDecimal amount, String currency,
+                                              String secretKey) {
+
+        String payload = ENCRYPTION_ALGORITHM.toUpperCase() + "\n" +
+                "request_time_stamp=" + timestamp + "\n" +
+                "merchant_account_id=" + merchantID + "\n" +
+                "request_id=" + requestID + "\n" +
+                "transaction_type=" + transactionType + "\n" +
+                "requested_amount=" + amount + "\n" +
+                "requested_amount_currency=" + currency.toUpperCase();
+
+        try {
+            byte[] encryptedPayload = encryptSignatureV2(payload, secretKey);
+            return new String(Base64.encode(payload.getBytes(UTF_8), Base64.NO_WRAP), UTF_8)
+                    + "." + new String(Base64.encode(encryptedPayload, Base64.NO_WRAP), UTF_8);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static byte[] encryptSignatureV2(String payload, String secretKey) {
+        try {
+            final Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretKey.getBytes(), "HmacSHA256"));
+            return mac.doFinal(payload.getBytes());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new byte[1];
+    }
+
     private String generateTimestamp() {
         TimeZone timeZone = TimeZone.getTimeZone("UTC");
         Calendar calendar = Calendar.getInstance(timeZone);
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.ENGLISH);
-        simpleDateFormat.setTimeZone(timeZone);
-        return simpleDateFormat.format(calendar.getTime());
-    }
-
-    public String generateSignature(String text) {
-        MessageDigest md = null;
-        try {
-            md = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        StringBuilder sb = new StringBuilder();
-        try {
-            md.update(text.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        byte[] mbs = md.digest();
-        sb.setLength(0);
-        for (int i = 0; i < mbs.length; i++) {
-            sb.append(Integer.toString((mbs[i] & 0xff) + 0x100, 16).substring(1));
-        }
-        return sb.toString();
+        return new StringBuilder(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH)
+                .format(calendar.getTime()))
+                .insert(22, ":")
+                .toString();
     }
 
 
