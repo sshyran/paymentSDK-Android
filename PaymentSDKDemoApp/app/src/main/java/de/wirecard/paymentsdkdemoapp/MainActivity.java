@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView stateLabel;
     private Switch securityCodeOnlySwitch;
+    private TextView resultLabel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,10 +56,12 @@ public class MainActivity extends AppCompatActivity {
 
         stateLabel = (TextView) findViewById(R.id.state);
         securityCodeOnlySwitch = (Switch) findViewById(R.id.securityCodeOnlySwitch);
+        resultLabel = (TextView) findViewById(R.id.result);
 
         String environment = WirecardEnvironment.TEST.getValue();
         try {
             wirecardClient = WirecardClientBuilder.newInstance(this, environment)
+                    .setRequestTimeout(60)
                     .build();
         } catch (WirecardException exception) {
             Log.d(BuildConfig.APPLICATION_ID, "device is rooted");
@@ -79,11 +82,14 @@ public class MainActivity extends AppCompatActivity {
                         //...
                         break;
                     case WirecardInputFormsStateChangedListener.CARD_VALID:
+                        resultLabel.setText("");
                         makeTransaction(false);
                         break;
                     case WirecardInputFormsStateChangedListener.SECURITY_CODE_VALID:
-                        if (securityCodeOnlySwitch.isChecked())
+                        if (securityCodeOnlySwitch.isChecked()) {
+                            resultLabel.setText("");
                             makeTransaction(true);
+                        }
                         //...
                 }
             }
@@ -106,9 +112,6 @@ public class MainActivity extends AppCompatActivity {
             wirecardCardFormFragment = new WirecardCardFormFragment.Builder(wirecardExtendedCardPayment)
                     .setLocale("de")
                     .build();
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.container, wirecardCardFormFragment).commit();
         } else {
             wirecardExtendedCardPayment.setCardToken(new CardToken("4193258203791111", null));
             wirecardCardFormFragment = new WirecardCardFormFragment.Builder(wirecardExtendedCardPayment)
@@ -116,13 +119,18 @@ public class MainActivity extends AppCompatActivity {
                     .setExpirationDate("1219")
                     .setCardBrand(CardBrand.VISA)
                     .build();
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.container, wirecardCardFormFragment).commit();
         }
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, wirecardCardFormFragment).commit();
     }
 
     private void initWirecardPaymentObject() {
+        wirecardExtendedCardPayment = new WirecardExtendedCardPayment(null, null, null, null,
+                null, new BigDecimal(0), null);
+    }
+
+    private void makeTransaction(boolean tokenAppended) {
         // for testing purposes only, do not store your merchant account ID and secret key inside app
         String timestamp = generateTimestamp();
         String merchantID = "33f6d473-3036-4ca5-acb5-8c64dac862d1";
@@ -135,12 +143,13 @@ public class MainActivity extends AppCompatActivity {
         String signature = generateSignatureV2(timestamp, merchantID, requestID,
                 transactionType.getValue(), amount, currency, secretKey);
 
-        wirecardExtendedCardPayment =
-                new WirecardExtendedCardPayment(signature, timestamp, requestID,
-                        merchantID, transactionType, amount, currency);
-    }
-
-    private void makeTransaction(boolean tokenAppended) {
+        wirecardExtendedCardPayment.setRequestTimeStamp(timestamp);
+        wirecardExtendedCardPayment.setMerchantAccountID(merchantID);
+        wirecardExtendedCardPayment.setRequestID(requestID);
+        wirecardExtendedCardPayment.setTransactionType(transactionType);
+        wirecardExtendedCardPayment.setAmount(amount);
+        wirecardExtendedCardPayment.setCurrency(currency);
+        wirecardExtendedCardPayment.setSignature(signature);
 
         if (!tokenAppended) {
             //append last name
@@ -154,12 +163,17 @@ public class MainActivity extends AppCompatActivity {
         wirecardClient.makePayment(wirecardExtendedCardPayment, null, new WirecardResponseListener() {
             @Override
             public void onResponse(WirecardPaymentResponse wirecardPaymentResponse) {
-                Log.d(BuildConfig.APPLICATION_ID, "success");
+                Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, "response received");
+
+                resultLabel.setText(wirecardPaymentResponse.getTransactionState().getValue() + "\n"
+                        + wirecardPaymentResponse.getStatuses().getStatus()[0].getDescription());
             }
 
             @Override
             public void onError(WirecardResponseError wirecardResponseError) {
-                Log.d(BuildConfig.APPLICATION_ID, wirecardResponseError.getErrorMessage());
+                Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, wirecardResponseError.getErrorMessage());
+
+                resultLabel.setText(wirecardResponseError.getErrorMessage());
             }
         });
     }

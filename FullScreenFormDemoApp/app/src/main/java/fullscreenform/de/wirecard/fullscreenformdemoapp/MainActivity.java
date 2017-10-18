@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String environment = WirecardEnvironment.TEST.getValue();
         try {
             wirecardClient = WirecardClientBuilder.newInstance(this, environment)
+                    .setRequestTimeout(60)
                     .build();
         } catch (WirecardException exception) {
             Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, "device is rooted");
