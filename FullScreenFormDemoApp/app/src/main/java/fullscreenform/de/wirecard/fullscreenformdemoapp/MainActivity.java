@@ -1,11 +1,16 @@
 package fullscreenform.de.wirecard.fullscreenformdemoapp;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+
+import com.zapp.library.merchant.util.PBBAAppUtils;
+import com.zapp.library.merchant.util.PBBALibraryUtils;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -28,6 +33,7 @@ import de.wirecard.paymentsdk.WirecardResponseError;
 import de.wirecard.paymentsdk.WirecardResponseListener;
 import de.wirecard.paymentsdk.WirecardTransactionType;
 import de.wirecard.paymentsdk.models.WirecardCardPayment;
+import de.wirecard.paymentsdk.models.WirecardPBBAPayment;
 import de.wirecard.paymentsdk.models.WirecardPayPalPayment;
 import de.wirecard.paymentsdk.models.WirecardPayment;
 import de.wirecard.paymentsdk.models.WirecardSepaPayment;
@@ -59,10 +65,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setOnClickListeners();
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        Uri uri = intent.getData();
+        if(uri != null){
+            Log.i("uri", uri.toString());
+        }
+    }
+
     private void setOnClickListeners() {
         findViewById(R.id.card).setOnClickListener(this);
         findViewById(R.id.paypal).setOnClickListener(this);
         findViewById(R.id.sepa).setOnClickListener(this);
+        findViewById(R.id.pbba).setOnClickListener(this);
     }
 
 
@@ -116,24 +133,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         merchantID, transactionType, amount, currency, "creditorID", "mandateID", new Date(),
                         "merchantName", null);
                 break;
+            case PBBA:
+                merchantID = "70055b24-38f1-4500-a3a8-afac4b1e3249";
+                secretKey = "4a4396df-f78c-44b9-b8a0-b72b108ac465";
+
+                currency = "GBP";
+                String zappTransactionType = "PAYMT";
+                String zappDeliveryType = "SERVICE";
+                String returnValue = "paymentsdkdemo://open.pbba";
+
+
+
+                signature = generateSignatureV2(timestamp, merchantID, requestID,
+                        transactionType.getValue(), amount, currency, secretKey);
+
+                wirecardPayment = new WirecardPBBAPayment(signature, timestamp, requestID, merchantID, transactionType, amount, currency, zappTransactionType, zappDeliveryType, returnValue);
+                wirecardPayment.setIpAddress("127.0.0.1");
+                break;
         }
 
         wirecardClient.makePayment(wirecardPayment, null, new WirecardResponseListener() {
             @Override
             public void onResponse(WirecardPaymentResponse wirecardPaymentResponse) {
+                dismissPbbaPopup();
                 Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, "response received");
-
                 resultLabel.setText(wirecardPaymentResponse.getTransactionState().getValue() + "\n"
                         + wirecardPaymentResponse.getStatuses().getStatus()[0].getDescription());
             }
 
             @Override
             public void onError(WirecardResponseError wirecardResponseError) {
+                dismissPbbaPopup();
                 Log.d(de.wirecard.paymentsdk.BuildConfig.APPLICATION_ID, wirecardResponseError.getErrorMessage());
-
                 resultLabel.setText(wirecardResponseError.getErrorMessage());
             }
         });
+    }
+
+    private void dismissPbbaPopup(){
+        PBBAAppUtils.dismissPBBAPopup(this);
     }
 
     @Override
@@ -147,6 +185,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.sepa:
                 makeTransaction(WirecardPaymentType.SEPA, WirecardTransactionType.PENDING_DEBIT);
+                break;
+            case R.id.pbba:
+                makeTransaction(WirecardPaymentType.PBBA, WirecardTransactionType.DEBIT);
                 break;
         }
     }
