@@ -2,6 +2,7 @@ package fullscreenform.de.wirecard.fullscreenformdemoapp;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
@@ -64,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onNewIntent(intent);
 
         Uri uri = intent.getData();
-        if(uri != null){
+        if (uri != null) {
             Log.i("uri", uri.toString());
         }
     }
@@ -103,7 +104,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 wirecardPayment = new WirecardCardPayment(signature, timestamp, requestID,
                         merchantID, transactionType, amount, currency);
                 ((WirecardCardPayment) wirecardPayment).setAttempt3d(true);
-                wirecardPayment.setProcessingURL("paymentsdk://web.result");
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+                    wirecardPayment.setProcessingURL("paymentsdk://web.result");
                 break;
             case PAYPAL:
 
@@ -139,7 +141,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String returnValue = "paymentsdkdemo://open.pbba";
 
 
-
                 signature = generateSignatureV2(timestamp, merchantID, requestID,
                         transactionType.getValue(), amount, currency, secretKey);
 
@@ -166,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private void dismissPbbaPopup(){
+    private void dismissPbbaPopup() {
         PBBAAppUtils.dismissPBBAPopup(this);
     }
 
