@@ -26,12 +26,7 @@ import javax.crypto.spec.SecretKeySpec;
 import de.wirecard.paymentsdk.WirecardClient;
 import de.wirecard.paymentsdk.WirecardClientBuilder;
 import de.wirecard.paymentsdk.WirecardEnvironment;
-import de.wirecard.paymentsdk.WirecardException;
-import de.wirecard.paymentsdk.WirecardPaymentResponse;
-import de.wirecard.paymentsdk.WirecardPaymentType;
-import de.wirecard.paymentsdk.WirecardResponseError;
-import de.wirecard.paymentsdk.WirecardResponseListener;
-import de.wirecard.paymentsdk.WirecardTransactionType;
+import de.wirecard.paymentsdk.*;
 import de.wirecard.paymentsdk.models.WirecardCardPayment;
 import de.wirecard.paymentsdk.models.WirecardPBBAPayment;
 import de.wirecard.paymentsdk.models.WirecardPayPalPayment;
@@ -51,7 +46,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         String environment = WirecardEnvironment.TEST.getValue();
         try {
             wirecardClient = WirecardClientBuilder.newInstance(this, environment)
@@ -109,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 wirecardPayment = new WirecardCardPayment(signature, timestamp, requestID,
                         merchantID, transactionType, amount, currency);
                 ((WirecardCardPayment) wirecardPayment).setAttempt3d(true);
+                wirecardPayment.setProcessingURL("paymentsdk://web.result");
                 break;
             case PAYPAL:
 
@@ -120,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 wirecardPayment = new WirecardPayPalPayment(signature, timestamp, requestID,
                         merchantID, transactionType, amount, currency);
+                wirecardPayment.setProcessingURL("paymentsdk://web.result");
                 break;
             case SEPA:
 

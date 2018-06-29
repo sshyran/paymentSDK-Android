@@ -25,12 +25,9 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:26.0.2'
-
-    compile 'com.github.wirecard:paymentSDK-Android:2.12.0-cardScannerDisabled'
-
+    compile 'com.android.support:appcompat-v7:26.1.0'
     //  compile 'io.card:android-sdk:5.5.1'
     compile 'com.squareup.okhttp3:logging-interceptor:3.5.0'
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
@@ -41,13 +38,16 @@ dependencies {
         exclude module: 'stax-api'
         exclude module: 'xpp3'
     }
-
     // iban validator
     compile 'org.iban4j:iban4j:3.2.1'
-
     // ocr
     compile 'com.google.android.gms:play-services-vision:11.6.2'
-
+    //chrometabs
+    compile 'com.android.support:customtabs:26.1.0'
     // tracker
     compile 'org.piwik.sdk:piwik-sdk:2.0.0'
+
+    compile 'com.github.wirecard:paymentSDK-Android:2.15.0-cardScannerDisabled'
+
+
 }
